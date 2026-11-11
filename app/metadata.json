@@ -1,0 +1,6 @@
+{
+  "name": "CIBP - Commerce IB Prep",
+  "description": "Investment banking technical interview preparation for Queen's Commerce students with diagnostic quiz, targeted learning plans, and interview drills.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
