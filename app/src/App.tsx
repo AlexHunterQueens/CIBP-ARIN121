@@ -160,11 +160,21 @@ export default function App() {
     const initialHistory: ChatMessage[] = [{ role: 'user', content: firstUserMsg }];
 
     try {
-      const reply = await callAiWithHistory(initialHistory);
-      const updatedHistory: ChatMessage[] = [
+      let reply = await callAiWithHistory(initialHistory);
+      let updatedHistory: ChatMessage[] = [
         ...initialHistory,
         { role: 'model', content: reply },
       ];
+      // Fallback: if the AI asked a follow up (for example about the optional survey
+      // items) instead of starting the quiz, tell it once to begin with Question 1.
+      if (!/Question\s+1\s+of\s+20/i.test(reply)) {
+        const retryHistory: ChatMessage[] = [
+          ...updatedHistory,
+          { role: 'user', content: 'I have nothing optional to add. Please start with Question 1 of 20 now.' },
+        ];
+        reply = await callAiWithHistory(retryHistory);
+        updatedHistory = [...retryHistory, { role: 'model', content: reply }];
+      }
       setHistory(updatedHistory);
 
       // Parse question 1
