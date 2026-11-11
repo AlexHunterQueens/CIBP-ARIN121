@@ -4,7 +4,7 @@ ARIN 121 Final Project, Fall 2026. Alex Hunter and Logan Keen, Queen's Universit
 
 An IB technical interview coach for Queen's Commerce first and second years. A starting survey and a 20 question diagnostic place the student at Beginner, Intermediate or Superday, then the app runs short daily sessions (reading with a worked example, then questions with hints) and a weekly retest.
 
-**Published app:** (link)
+**Published app:** https://ai.studio/apps/55ca62ab-5326-4d55-9b2c-5edecfd24792 (sign in with any Google account; runs on the free tier at no cost)
 
 ## Repository
 
@@ -12,6 +12,7 @@ An IB technical interview coach for Queen's Commerce first and second years. A s
 | --- | --- |
 | `prompts/v0.md` | Initial system prompt, from the Application Design |
 | `prompts/v1.md` to `v4.md` | System prompt after each Playground development cycle |
+| `prompts/v5.md` | System prompt after Cycle 5 (Build retest), the version the app runs |
 | `build/build-prompt.md` | Main prompt given to AI Studio Build mode |
 | `app/` | Application code exported from Build |
 
