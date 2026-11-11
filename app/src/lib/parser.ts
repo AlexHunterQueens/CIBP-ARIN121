@@ -240,6 +240,14 @@ export function parseAssessmentTable(
         points = 0;
       }
 
+      // Input contract: the I Don't Know button sends exactly "I don't know" (Cycle 2 rule),
+      // so record it as Not attempted even if the model labels it Incorrect.
+      const normAns = studentAns.replace(/["\u201C\u201D*]/g, '').trim().toLowerCase();
+      if (/^(i don['\u2019]?t know|idk)\.?$/.test(normAns) || /^not attempted/i.test(explanation.trim())) {
+        assessment = 'Not attempted';
+        points = 0;
+      }
+
       // Try to determine conceptId
       let matchedConceptId: string | undefined;
       for (const concept of CONCEPT_LIST) {
@@ -337,13 +345,13 @@ export function calculateDiagnosticResult(
   const planWeeks: 4 | 8 | 16 = isWithin4Weeks ? 4 : defaultWeeks;
 
   // Build ranked focus concepts: 3 to 5 concepts
-  // Priority: Incorrect & Not attempted first, then Partially correct, then any unmastered
+  // Priority: Incorrect and Not attempted share the top rank (kept in question order),
+  // then Partially correct, then any unmastered
   const rankedRows = [...assessmentRows].sort((a, b) => {
     const priorityWeight = (assess: AssessmentType) => {
-      if (assess === 'Incorrect') return 1;
-      if (assess === 'Not attempted') return 2;
-      if (assess === 'Partially correct') return 3;
-      return 4;
+      if (assess === 'Incorrect' || assess === 'Not attempted') return 1;
+      if (assess === 'Partially correct') return 2;
+      return 3;
     };
     return priorityWeight(a.assessment) - priorityWeight(b.assessment);
   });
@@ -501,4 +509,22 @@ export function parseDrillFeedback(text: string): {
   }
 
   return { accurate, order, terms, nextQuestion, isComplete, strength, priority };
+}
+
+
+/**
+ * Returns any text the AI wrote before the "Question N of 20" header
+ * (for example a decline of an off topic request), so the app can show it
+ * above the question card. Returns '' when there is nothing worth showing.
+ */
+export function extractSideText(rawText: string): string {
+  if (!rawText) return '';
+  const m = rawText.match(/(?:\*\*|#+)?\s*Question\s+\d+\s+of\s+\d+/i);
+  if (!m || m.index === undefined || m.index === 0) return '';
+  const pre = rawText
+    .slice(0, m.index)
+    .replace(/\*\*/g, '')
+    .replace(/(?:here is|here's|next up|moving on to|on to)\s*:?\s*$/i, '')
+    .trim();
+  return pre.length >= 20 ? pre : '';
 }

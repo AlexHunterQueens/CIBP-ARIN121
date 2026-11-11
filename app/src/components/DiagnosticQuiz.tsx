@@ -10,6 +10,7 @@ interface DiagnosticQuizProps {
   onSubmitAnswer: (answer: string) => void;
   isLoading: boolean;
   loadingStatusText?: string;
+  sideText?: string; // AI text sent before the question, e.g. a decline of an off topic request
 }
 
 export const DiagnosticQuiz: React.FC<DiagnosticQuizProps> = ({
@@ -20,6 +21,7 @@ export const DiagnosticQuiz: React.FC<DiagnosticQuizProps> = ({
   onSubmitAnswer,
   isLoading,
   loadingStatusText,
+  sideText,
 }) => {
   const [answer, setAnswer] = useState('');
 
@@ -60,6 +62,16 @@ export const DiagnosticQuiz: React.FC<DiagnosticQuizProps> = ({
             />
           </div>
         </div>
+
+        {/* AI side text (for example a decline), shown above the question */}
+        {sideText && (
+          <div
+            role="status"
+            className="bg-[#f2f4f8] border-l-4 border-[#0047bb] px-4 py-3 text-sm text-[#071d49] leading-relaxed"
+          >
+            <FormattedText text={sideText} />
+          </div>
+        )}
 
         {/* Question Card */}
         <div className="bg-white border-2 border-[#071d49] p-6 sm:p-8 space-y-4">

@@ -19,6 +19,7 @@ import {
   calculateDiagnosticResult,
   cleanQuestionForCard,
   extractCleanQuestionText,
+  extractSideText,
   parseAssessmentTable,
   parseDrillFeedback,
   parseLearnModeContent,
@@ -45,6 +46,7 @@ export default function App() {
   // Quiz state
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(1);
   const [currentQuestionText, setCurrentQuestionText] = useState('');
+  const [diagnosticSideText, setDiagnosticSideText] = useState('');
   const [currentTopicArea, setCurrentTopicArea] = useState('Accounting');
 
   // Learn mode state
@@ -150,6 +152,7 @@ export default function App() {
     setStudentAnswers([]);
     setAskedQuestions([]);
     setCurrentQuestionIndex(1);
+    setDiagnosticSideText('');
     setHasBusyError(false);
     setLastPendingAction(() => () => handleStartDiagnostic(surveyData));
 
@@ -234,11 +237,26 @@ export default function App() {
         const header = parseQuestionHeader(reply);
         const { cleanQuestion, topicTag } = cleanQuestionForCard(reply, currentTopicArea);
         const qIdx = header?.current || updatedAnswers.length + 1;
+
+        // If the AI did not move on (for example it declined an off topic request and
+        // came back to the same question), keep that question on the card, show the whole
+        // reply above it, and drop the off topic message from the recorded answers.
+        const sameQuestion = !!header && qIdx === currentQuestionIndex && !!currentQuestionText;
+        if (sameQuestion) {
+          setStudentAnswers(updatedAnswers.slice(0, qIdx - 1));
+          setDiagnosticSideText(reply.replace(/\*\*/g, '').trim());
+          setHasBusyError(false);
+          setLastPendingAction(null);
+          return;
+        }
+
         const qText = cleanQuestion || (CONCEPT_LIST[qIdx - 1]?.sampleQuestion) || `Question ${qIdx}`;
 
         setCurrentQuestionIndex(qIdx);
         setCurrentTopicArea(topicTag);
         setCurrentQuestionText(qText);
+        // Show any decline or side reply the AI wrote before the next question
+        setDiagnosticSideText(extractSideText(reply));
         setAskedQuestions((prev) => {
           const next = [...prev];
           next[qIdx - 1] = qText;
@@ -528,17 +546,25 @@ export default function App() {
   };
 
   // Reset all state to start fresh
+  // window.confirm is blocked inside the AI Studio preview frame, so Reset uses a
+  // two click confirm in the header instead: the first click arms it for 4 seconds.
+  const [resetArmed, setResetArmed] = useState(false);
   const handleReset = () => {
-    if (window.confirm('Are you sure you want to reset your diagnostic survey and plan?')) {
-      localStorage.removeItem(STORAGE_KEY);
-      setSurvey(null);
-      setDiagnosticResult(null);
-      setHistory([]);
-      setStudentAnswers([]);
-      setAskedQuestions([]);
-      setCurrentQuestionIndex(1);
-      setActiveTab('survey');
+    if (!resetArmed) {
+      setResetArmed(true);
+      setTimeout(() => setResetArmed(false), 4000);
+      return;
     }
+    setResetArmed(false);
+    localStorage.removeItem(STORAGE_KEY);
+    setSurvey(null);
+    setDiagnosticResult(null);
+    setHistory([]);
+    setStudentAnswers([]);
+    setAskedQuestions([]);
+    setCurrentQuestionIndex(1);
+    setDiagnosticSideText('');
+    setActiveTab('survey');
   };
 
   const focusConceptIds = diagnosticResult?.focusConcepts.map((c) => c.conceptId) || ['A3', 'D2', 'E4', 'V4', 'A1'];
@@ -554,6 +580,7 @@ export default function App() {
         }}
         hasPlan={!!diagnosticResult}
         onReset={handleReset}
+        resetArmed={resetArmed}
       />
 
       {/* Clear error box with message and Retry button */}
@@ -603,6 +630,7 @@ export default function App() {
             onSubmitAnswer={handleDiagnosticAnswer}
             isLoading={isLoading}
             loadingStatusText={loadingStatusText}
+            sideText={diagnosticSideText}
           />
         )}
 

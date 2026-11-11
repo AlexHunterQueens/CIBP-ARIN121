@@ -5,6 +5,7 @@ interface HeaderProps {
   onSelectTab: (tab: 'plan' | 'learn' | 'drill' | 'retest' | 'results') => void;
   hasPlan: boolean;
   onReset?: () => void;
+  resetArmed?: boolean; // true after the first click: the next click resets
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -12,6 +13,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectTab,
   hasPlan,
   onReset,
+  resetArmed,
 }) => {
   return (
     <header className="bg-[#071d49] text-white border-b border-[#071d49]">
@@ -94,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="text-xs uppercase tracking-wider text-[#a6b8db] hover:text-white underline ml-2 cursor-pointer"
               title="Restart Diagnostic Survey"
             >
-              Reset
+              {resetArmed ? 'Click again to reset' : 'Reset'}
             </button>
           )}
         </div>
