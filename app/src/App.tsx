@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { WelcomeSurvey } from './components/WelcomeSurvey';
 import { DiagnosticQuiz } from './components/DiagnosticQuiz';
@@ -51,6 +51,7 @@ export default function App() {
 
   // Learn mode state
   const [activeLearnConceptId, setActiveLearnConceptId] = useState<string>('A3');
+  const learnAttemptsRef = useRef<Record<string, number>>({});
 
   // Drill state
   const [drillQuestionIndex, setDrillQuestionIndex] = useState(1);
@@ -319,7 +320,15 @@ export default function App() {
     answer: string
   ): Promise<{ hint?: string; explanation?: string; isCorrect?: boolean }> => {
     const concept = CONCEPT_LIBRARY[conceptId] || CONCEPT_LIBRARY['A3'];
-    const userMsg = `Learn Mode check question for ${concept.id} ${concept.name}. My answer: "${answer}"`;
+    // Tell the AI which question was asked and which attempt this is, so it follows the
+    // Learn mode rule: one focused hint after a first miss, the full explanation after a second.
+    const attempt = (learnAttemptsRef.current[concept.id] || 0) + 1;
+    learnAttemptsRef.current[concept.id] = attempt;
+    const attemptRule =
+      attempt === 1
+        ? 'This is my first attempt: if my answer is wrong or incomplete, give one focused hint only and let me try again.'
+        : 'This is my second attempt: if it is still wrong, explain the step clearly.';
+    const userMsg = `Learn mode, concept ${concept.id} ${concept.name}. Check question: "${concept.sampleQuestion}". ${attemptRule} Stay on this concept. My answer: "${answer}"`;
     const updatedHistory: ChatMessage[] = [...history, { role: 'user', content: userMsg }];
     setHistory(updatedHistory);
 
@@ -333,10 +342,13 @@ export default function App() {
         reply.toLowerCase().includes('correct') &&
         !reply.toLowerCase().includes('incorrect') &&
         !reply.toLowerCase().includes('partially');
+      if (isCorrect || attempt >= 2) learnAttemptsRef.current[concept.id] = 0;
 
+      // After a first miss show only the hint, so the student gets a real second attempt
+      const hintOnly = attempt === 1 && !isCorrect && !!parsed.hint;
       return {
         hint: parsed.hint,
-        explanation: reply,
+        explanation: hintOnly ? undefined : reply,
         isCorrect,
       };
     } catch {
@@ -586,7 +598,12 @@ export default function App() {
         activeTab={activeTab}
         onSelectTab={(tab) => {
           setIsShowingRetestResults(false);
-          setActiveTab(tab);
+          // Practice tabs start from the plan (first focus concept, fresh drill or retest)
+          if (tab === 'learn' || tab === 'drill' || tab === 'retest') {
+            handleSelectMode(tab);
+          } else {
+            setActiveTab(tab);
+          }
         }}
         hasPlan={!!diagnosticResult}
         onReset={handleReset}
